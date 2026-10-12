@@ -1,0 +1,40 @@
+services:
+  cloud-sql-proxy:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest
+    container_name: cloud-sql-proxy
+    restart: always
+    command:
+      - "--address=0.0.0.0"
+      - "--port=3306"
+      - "--credentials-file=/secrets/cloudsql/misr-vision_service_account_key.json"
+      - "${INSTANCE_CONNECTION_NAME}"
+    volumes:
+      - ./secrets/cloudsql:/secrets/cloudsql:ro
+    networks:
+      - app-network
+
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    env_file:  # Injects your .env file at runtime
+      - ./.env
+    networks:
+      - app-network
+    depends_on:
+      - cloud-sql-proxy
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge
